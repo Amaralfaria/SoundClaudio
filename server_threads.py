@@ -15,6 +15,7 @@ class servidor:
         self.listaConexoes = list()
         self.threads = ThreadPoolExecutor()
         self.threads.submit(self.conecta)
+        self.threads.submit(self.escuta)
 
 
 
