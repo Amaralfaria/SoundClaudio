@@ -160,14 +160,19 @@ const socketConnect = () => {
     console.log("I got a message!", message);
 
     if (typeof message == "object") {
-      const audio = new Audio();
-      var reader = new FileReader();
-      let newBlob = new Blob([message], { type: "audio/wav" });
-      reader.readAsDataURL(newBlob);
-      reader.onloadend = function (e) {
-        audio.innerHTML = `<source src=${reader.result} type="audio/wav">`;
-      };
+      const audio = document.createElement("audio");
       audio.controls = true;
+
+      var reader = new FileReader();
+
+      reader.onloadend = function (e) {
+        const arrayBuffer = e.target.result;
+
+        let wav = new window.wavefile.WaveFile();
+        wav.fromScratch(2, 8000, "16", new Int16Array(arrayBuffer));
+        audio.src = wav.toDataURI();
+      };
+      reader.readAsArrayBuffer(message);
 
       document.querySelector(".music-list").appendChild(audio);
     }

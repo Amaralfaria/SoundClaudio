@@ -140,8 +140,8 @@ class Server:
 
         if msg == b'manda musica':
             w = wave.open(os.path.join(os.path.dirname(__file__), 'audio.wav') , "rb")
+            print(w.getparams())
             data = w.readframes(w.getnframes())
-            print(len(data))
             w.close()
 
         response = b'' 
