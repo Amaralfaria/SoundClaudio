@@ -5,16 +5,16 @@ import { Socket } from "net";
 execSync("sleep 1");
 
 var socket = new Socket();
-socket.setEncoding("utf-8")
+socket.setEncoding("utf-8");
 
-socket.connect(8004, "0.0.0.0", () => {
+socket.connect(8000, "127.0.1.1", () => {
   // manda qualquer coisa so para receber resposta
   socket.write("lista");
   socket.write("clientes");
 });
 
 socket.on("data", (data) => {
-  console.log(data)  
+  console.log(data);
   socket.destroy();
   console.log("socket fechado");
 });
