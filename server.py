@@ -58,7 +58,6 @@ class Server:
                 response = self.handle_websocket_msg(msg)
 
             print("resposta enviada: ")
-            #print(response)
             socketParaCliente.send(response)
             
             max_messages -= 1
@@ -139,7 +138,7 @@ class Server:
             data = b'oi pra voce tambem'
 
         if msg == b'manda musica':
-            w = wave.open(os.path.join(os.path.dirname(__file__), 'audio.wav') , "rb")
+            w = wave.open(os.path.join(os.path.dirname(__file__), 'taylor.wav') , "rb")
             print(w.getparams())
             data = w.readframes(w.getnframes())
             w.close()

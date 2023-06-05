@@ -117,40 +117,6 @@ const socketConnect = () => {
     console.log("Websocket conectado");
     sock.send("oi");
 
-    const id = Math.round(Math.random() * 100);
-
-    const data = JSON.stringify([
-      {
-        id,
-        name: `[${id}] Erick Wendel`,
-        address: {
-          street: "my street",
-          number: 20 * id,
-        },
-        profession: "developer",
-      },
-      {
-        id,
-        name: `[${id}] Jose da Silva`,
-        address: {
-          street: "my street",
-          number: 20 * id,
-        },
-        profession: "developer",
-      },
-      {
-        id,
-        name: `[${id}] Mary Santos`,
-        address: {
-          street: "my street",
-          number: 20 * id,
-        },
-        profession: "developer",
-      },
-    ]);
-
-    console.log(data.length);
-
     sock.send("manda musica");
   };
 
@@ -169,7 +135,7 @@ const socketConnect = () => {
         const arrayBuffer = e.target.result;
 
         let wav = new window.wavefile.WaveFile();
-        wav.fromScratch(2, 8000, "16", new Int16Array(arrayBuffer));
+        wav.fromScratch(2, 44100, "16", new Int16Array(arrayBuffer));
         audio.src = wav.toDataURI();
       };
       reader.readAsArrayBuffer(message);
