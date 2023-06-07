@@ -9,13 +9,6 @@ from threading import Thread
 
 WEBSOCKET_MAGIC_STRING_KEY = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
-list = [
-        {
-            "id": 0,
-            "nome": "audio.wav",
-            "path": "./audio.wav"
-        }
-]
 
 class Server:
     def __init__(self, endereco_servidor="127.0.1.1", porta_servidor=8000, max_conexoes=1):
@@ -43,7 +36,8 @@ class Server:
             novaThread.run()
 
     def implementacaoThreadCliente(self, enderecoDoCliente, socketParaCliente):
-        max_messages = 3
+        max_messages = 100
+        pointer_song = 0
         while max_messages > 0:
             mensagem = socketParaCliente.recv(4000)
 
@@ -55,7 +49,8 @@ class Server:
                 response = response.encode('utf-8')
             except:
                 msg = self.decode_websocket_msg(mensagem)
-                response = self.handle_websocket_msg(msg)
+
+                response, pointer_song = self.handle_websocket_msg(msg,pointer_song)
 
             print("resposta enviada: ")
             socketParaCliente.send(response)
@@ -79,6 +74,10 @@ class Server:
                     "" ]
 
         return "\r\n".join(response)
+
+
+    
+
 
     def decode_websocket_msg(self, msg):
         current_byte = 1
@@ -125,8 +124,9 @@ class Server:
 
         return decoded
 
-    def handle_websocket_msg(self, msg):
+    def handle_websocket_msg(self, msg, pointer = 0):
         data = msg
+        
 
         if msg == b'payload too long': 
             data = msg
@@ -135,12 +135,24 @@ class Server:
             data = msg
 
         if msg == b'oi':
-            data = b'oi pra voce tambem'
+            data = b'salve pai'
 
-        if msg == b'manda musica':
-            w = wave.open(os.path.join(os.path.dirname(__file__), 'taylor.wav') , "rb")
-            print(w.getparams())
-            data = w.readframes(w.getnframes())
+        if msg == b'manda lista':
+            data = json.dumps(info_musicas).encode()
+
+        if 'manda musica' in msg.decode():
+            # isso aqui é pra quando der pra escolher a musica
+            # lista = msg.decode().split()
+            # nome__musica = lista[2]
+            # caminho_musica = 'musicas/' + nome__musica
+
+            # w = wave.open(os.path.join(os.path.dirname(__file__), caminho_musica) , "rb")
+
+
+            w = wave.open(os.path.join(os.path.dirname(__file__), 'musicas/taylor.wav') , "rb")
+            w.setpos(30*pointer*w.getframerate())
+            data = w.readframes(w.getframerate()*30)
+            pointer += 1
             w.close()
 
         response = b'' 
@@ -165,7 +177,7 @@ class Server:
 
         response += data
 
-        return response
+        return response, pointer
     
     def createSocketAccept(self, id):
         hash = hashlib.sha1()
@@ -176,4 +188,25 @@ class Server:
 
 #hostname = socket.gethostname()
 #ipAddr = socket.gethostbyname(hostname)
+
+info_musicas = [
+        {
+            "id": 0,
+            "nome": "audio.wav",
+            "path": "./audio.wav",
+            "duração": 33
+        },
+        {
+            "id": 1,
+            "nome":"taylor.wav",
+            "path": "./taylor.wav",
+            "duração": 236
+        }
+]
+
+# musicas_dir = os.listdir('musicas')
+# w = wave.open('musicas/audio.wav',"rb")
+# print(w.getsampwidth(),w.getframerate())
+# w.close()
+
 Server()

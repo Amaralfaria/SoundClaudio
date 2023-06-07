@@ -5,6 +5,8 @@ const list = [
   },
 ];
 
+var lista_musicas;
+
 const card = (music) => {
   let components = {
     root: document.createElement("div"),
@@ -115,16 +117,17 @@ const socketConnect = () => {
 
   sock.onopen = (e) => {
     console.log("Websocket conectado");
-    sock.send("oi");
-
-    sock.send("manda musica");
+    
+    sock.send("manda lista");
+    sock.send("manda musica nome_musica");
   };
 
   sock.onmessage = async (msg) => {
     const message = msg.data;
     console.log(typeof message);
+  
     console.log("I got a message!", message);
-
+    //aqui é tratado a musica
     if (typeof message == "object") {
       const audio = document.createElement("audio");
       audio.controls = true;
@@ -141,6 +144,8 @@ const socketConnect = () => {
       reader.readAsArrayBuffer(message);
 
       document.querySelector(".music-list").appendChild(audio);
+    }else if(typeof message == "string"){
+      lista_musicas = JSON.parse(message)
     }
   };
 
