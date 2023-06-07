@@ -38,9 +38,10 @@ class Server:
     def implementacaoThreadCliente(self, enderecoDoCliente, socketParaCliente):
         max_messages = 100
         pointer_song = 0
+        # depois deixar esse pointer ser mandado pelo proprio cliente
         while max_messages > 0:
-            mensagem = socketParaCliente.recv(4000)
 
+            mensagem = socketParaCliente.recv(4000)
             response = ""
 
             try:
@@ -122,10 +123,13 @@ class Server:
             val = encoded[i] ^ mask_key[i % 4]
             decoded += val.to_bytes(length=1, signed=False)
 
+        print(decoded)
+
         return decoded
 
     def handle_websocket_msg(self, msg, pointer = 0):
         data = msg
+        
         
 
         if msg == b'payload too long': 
@@ -144,6 +148,7 @@ class Server:
             # isso aqui é pra quando der pra escolher a musica
             # lista = msg.decode().split()
             # nome__musica = lista[2]
+            # pointer = lista[3]
             # caminho_musica = 'musicas/' + nome__musica
 
             # w = wave.open(os.path.join(os.path.dirname(__file__), caminho_musica) , "rb")
@@ -179,6 +184,9 @@ class Server:
 
         return response, pointer
     
+    
+
+
     def createSocketAccept(self, id):
         hash = hashlib.sha1()
         hash.update((id + WEBSOCKET_MAGIC_STRING_KEY).encode('utf-8'))

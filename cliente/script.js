@@ -129,8 +129,9 @@ const socketConnect = () => {
     console.log("I got a message!", message);
     //aqui é tratado a musica
     if (typeof message == "object") {
-      const audio = document.createElement("audio");
-      audio.controls = true;
+      // const audio = document.createElement("audio");
+      // audio.controls = true;
+      const audio = document.getElementById("taylor.wav")
 
       var reader = new FileReader();
 
@@ -139,13 +140,23 @@ const socketConnect = () => {
 
         let wav = new window.wavefile.WaveFile();
         wav.fromScratch(2, 44100, "16", new Int16Array(arrayBuffer));
-        audio.src = wav.toDataURI();
+        audio.src += wav.toDataURI();
+        //sock.send("manda musica") //ta dando problema quando nao é criado um novo audio para cada 30s
       };
       reader.readAsArrayBuffer(message);
 
-      document.querySelector(".music-list").appendChild(audio);
+      // document.querySelector(".music-list").appendChild(audio);
     }else if(typeof message == "string"){
       lista_musicas = JSON.parse(message)
+      lista_musicas.forEach(function(info){
+        const audio = document.createElement("audio");
+        audio.controls = true;
+        audio.setAttribute("id",info["nome"])
+        document.querySelector(".music-list").appendChild(audio);
+
+      })
+
+
     }
   };
 
