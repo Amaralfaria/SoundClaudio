@@ -11,30 +11,31 @@ WEBSOCKET_MAGIC_STRING_KEY = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 
 class Server:
-    def __init__(self, endereco_servidor="127.0.1.1", porta_servidor=8000, max_conexoes=10):
+    def __init__(self, endereco_servidor="0.0.0.0", porta_servidor=8000, max_conexoes=10):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         self.socket.bind((endereco_servidor, porta_servidor))
+
         print(endereco_servidor, porta_servidor)
+
         self.socket.listen(max_conexoes)
+
         self.threadClientes = []
         self.clientes = []
 
-        self.threadEscuta = Thread(target=self.implementacaoThreadEscuta)
+        self.threadEscuta = Thread(target=self.implementacaoThreadEscuta, daemon=True)
         self.threadEscuta.run()
 
     def implementacaoThreadEscuta(self):
         while True:
             (socketParaCliente, enderecoDoCliente) = self.socket.accept()
-            print("novo cliente")
 
             novaThread = Thread(target=self.implementacaoThreadCliente,
                                 args=(enderecoDoCliente, socketParaCliente),
                                 daemon=True)
-            cliente = {
-                    "endereco": enderecoDoCliente
-                }
-            self.clientes.append(cliente)
-            novaThread.run()
+
+            novaThread.start()
+            self.clientes.append(novaThread)
 
     def implementacaoThreadCliente(self, enderecoDoCliente, socketParaCliente):
         max_messages = 10
@@ -48,12 +49,10 @@ class Server:
 
                 try:
                     msg = mensagem.decode('utf-8')
-                    print(msg)
                     response = self.http_upgrade(msg)
                     response = response.encode('utf-8')
                 except:
                     msg = self.decode_websocket_msg(mensagem)
-                    print(msg)
                     response, pointer_song = self.handle_websocket_msg(msg,pointer_song)
             except:
                 socketParaCliente.close()

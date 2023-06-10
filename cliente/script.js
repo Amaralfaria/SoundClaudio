@@ -182,17 +182,10 @@ const page = () => {
 };
 
 const socketConnect = (handleMusic, handleList) => {
-  const sock = new WebSocket("ws://127.0.1.1:8000");
+  const sock = new WebSocket("ws://localhost:8000");
   sock.binaryType = "arraybuffer";
 
-  //  let state = {
-  //isPlaying: false,
-  //};
-
-  //  let idx = 0;
   let wav = new window.wavefile.WaveFile();
-
-  //  const context = new AudioContext();
 
   sock.onopen = () => {
     console.log("Websocket conectado");
