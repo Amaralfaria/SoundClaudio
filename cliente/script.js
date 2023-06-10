@@ -7,34 +7,13 @@ const list = [
 
 var lista_musicas;
 
-const card = (music) => {
+const card = (music, callback) => {
   let components = {
     root: document.createElement("div"),
   };
 
-  let state = {
-    isPlaying: false,
-    interval: null,
-  };
-
-  let playMusic = () => {
-    let audio = document.querySelector("audio");
-    audio.play();
-    state.interval = setInterval(() => {
-      console.log("musica tocando");
-    }, 1000);
-  };
-
   let playBtnHandler = () => {
-    if (state.isPlaying) {
-      state.isPlaying = false;
-      clearInterval(state.interval);
-      console.log("musica pausada");
-      state.interval = null;
-    } else {
-      state.isPlaying = true;
-      playMusic();
-    }
+    callback(music);
   };
 
   let render = () => {
@@ -58,6 +37,87 @@ const card = (music) => {
   };
 };
 
+const player = () => {
+  let elements = {
+    root: document.querySelector(".player"),
+    playPauseBtn: document.querySelector(".player").querySelector("button"),
+    playPauseImg: document.querySelector(".player").querySelector("img"),
+    info: document.querySelector(".music-info"),
+  };
+
+  let state = {
+    music: null,
+    isPlaying: false,
+    context: null,
+    chunksLoaded: 0,
+    interval: null,
+  };
+
+  let render = (socket) => {
+    setHandlers(socket);
+
+    if (!state.music) elements.playPauseBtn.disabled = true;
+  };
+
+  let setActiveMusic = (music) => {
+    state.music = music;
+    elements.playPauseBtn.disabled = false;
+
+    elements.info.innerHTML = `<p>${music.nome}</p>`;
+
+    if (state.context) state.context?.close();
+
+    state.context = new AudioContext();
+  };
+
+  let onMessageCallback = (buff) => {
+    state.context.decodeAudioData(
+      buff,
+      (sourceBuffer) => {
+        var soundSource = state.context.createBufferSource();
+        soundSource.buffer = sourceBuffer;
+        soundSource.connect(state.context.destination);
+        soundSource.start(0 + 30 * state.chunksLoaded);
+        state.chunksLoaded++;
+        if (!state.isPlaying) context.suspend();
+      },
+      (e) => {
+        console.log(e);
+      }
+    );
+  };
+
+  let setHandlers = (socket) => {
+    elements.playPauseBtn.addEventListener("click", () => {
+      handlePlayPause(socket);
+    });
+  };
+
+  let handlePlayPause = (sock) => {
+    if (state.isPlaying) {
+      state.isPlaying = false;
+      elements.playPauseImg.src = "assets/play-button-svgrepo-com.svg";
+      if (state.context) state.context.suspend();
+      clearInterval(state.interval);
+      state.interval = null;
+    } else {
+      state.isPlaying = true;
+      elements.playPauseImg.src = "assets/pause-circle-svgrepo-com.svg";
+      if (state.context) state.context.resume();
+      if (state.chunksLoaded == 0) sock.send("manda musica");
+      state.interval = setInterval(() => {
+        sock.send("manda musica");
+      }, 10000);
+    }
+  };
+
+  return {
+    render,
+    setActiveMusic,
+    onMessageCallback,
+  };
+};
+
 const cardList = () => {
   let elements = {
     root: document.querySelector(".music-list"),
@@ -65,10 +125,12 @@ const cardList = () => {
 
   let state = {
     musicList: [],
+    playerCallback: null,
   };
 
-  let setMusicList = (musicList) => {
+  let setMusicList = (musicList, callback) => {
     state.musicList = musicList;
+    state.playerCallback = callback;
 
     render();
   };
@@ -80,7 +142,7 @@ const cardList = () => {
       elements.root.removeChild(elements.root.firstChild);
 
     state.musicList.forEach((music) => {
-      const musicCard = card(music).render();
+      const musicCard = card(music, state.playerCallback).render();
 
       elements.root.appendChild(musicCard);
     });
@@ -95,16 +157,23 @@ const cardList = () => {
 const page = () => {
   let components = {
     cardList: cardList(),
+    player: player(),
   };
 
   let state = {
     socket: null,
   };
 
-  let render = () => {
-    state.socket = socketConnect();
+  let handleMusicList = (list) => {
+    components.cardList.setMusicList(list, components.player.setActiveMusic);
+  };
 
-    components.cardList.setMusicList(list);
+  let render = () => {
+    state.socket = socketConnect(
+      components.player.onMessageCallback,
+      handleMusicList
+    );
+    components.player.render(state.socket);
   };
 
   return {
@@ -112,58 +181,46 @@ const page = () => {
   };
 };
 
-const socketConnect = () => {
+const socketConnect = (handleMusic, handleList) => {
   const sock = new WebSocket("ws://127.0.1.1:8000");
+  sock.binaryType = "arraybuffer";
 
-  sock.onopen = (e) => {
+  //  let state = {
+  //isPlaying: false,
+  //};
+
+  //  let idx = 0;
+  let wav = new window.wavefile.WaveFile();
+
+  //  const context = new AudioContext();
+
+  sock.onopen = () => {
     console.log("Websocket conectado");
-    
     sock.send("manda lista");
-    sock.send("manda musica nome_musica");
   };
 
   sock.onmessage = async (msg) => {
-    const message = msg.data;
-    console.log(typeof message);
-  
-    console.log("I got a message!", message);
-    //aqui é tratado a musica
-    if (typeof message == "object") {
-      // const audio = document.createElement("audio");
-      // audio.controls = true;
-      const audio = document.getElementById("taylor.wav")
+    if (msg.data instanceof ArrayBuffer) {
+      const message = msg.data;
 
-      var reader = new FileReader();
+      const chunk = new Int16Array(message);
 
-      reader.onloadend = function (e) {
-        const arrayBuffer = e.target.result;
+      wav.fromScratch(2, 16000, "16", chunk);
 
-        let wav = new window.wavefile.WaveFile();
-        wav.fromScratch(2, 44100, "16", new Int16Array(arrayBuffer));
-        audio.src += wav.toDataURI();
-        //sock.send("manda musica") //ta dando problema quando nao é criado um novo audio para cada 30s
-      };
-      reader.readAsArrayBuffer(message);
+      const buff = wav.toBuffer().buffer;
 
-      // document.querySelector(".music-list").appendChild(audio);
-    }else if(typeof message == "string"){
-      lista_musicas = JSON.parse(message)
-      lista_musicas.forEach(function(info){
-        const audio = document.createElement("audio");
-        audio.controls = true;
-        audio.setAttribute("id",info["nome"])
-        document.querySelector(".music-list").appendChild(audio);
-
-      })
-
-
+      handleMusic(buff);
+    } else {
+      let data = JSON.parse(msg.data);
+      handleList(data);
     }
   };
 
   sock.onerror = (error) => console.log("Websocket error", error);
 
-  sock.onclose = (e) => console.log("Disconected from the Websocket Server");
-  //});
+  sock.onclose = () => {
+    console.log("Disconected from the Websocket Server");
+  };
 
   return sock;
 };
