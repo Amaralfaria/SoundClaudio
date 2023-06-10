@@ -101,12 +101,17 @@ const player = () => {
       clearInterval(state.interval);
       state.interval = null;
     } else {
+      request = "manda musica " + state.music["nome"] + " " + state.chunksLoaded;
+
       state.isPlaying = true;
       elements.playPauseImg.src = "assets/pause-circle-svgrepo-com.svg";
       if (state.context) state.context.resume();
-      if (state.chunksLoaded == 0) sock.send("manda musica");
+      if (state.chunksLoaded == 0){
+        sock.send(request);
+      }
       state.interval = setInterval(() => {
-        sock.send("manda musica");
+        request = "manda musica " + state.music["nome"] + " " + state.chunksLoaded;
+        sock.send(request);
       }, 10000);
     }
   };
@@ -197,7 +202,8 @@ const socketConnect = (handleMusic, handleList) => {
       const message = msg.data;
 
       const chunk = new Int16Array(message);
-
+      console.log(player.state);
+      //wav.fromScratch(2, player.state.music["framerate"]*1, "16", chunk);
       wav.fromScratch(2, 16000, "16", chunk);
 
       const buff = wav.toBuffer().buffer;

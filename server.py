@@ -39,7 +39,7 @@ class Server:
 
     def implementacaoThreadCliente(self, enderecoDoCliente, socketParaCliente):
         max_messages = 10
-        pointer_song = 0
+        
         # depois deixar esse pointer ser mandado pelo proprio cliente
         while max_messages > 0:
 
@@ -53,7 +53,7 @@ class Server:
                     response = response.encode('utf-8')
                 except:
                     msg = self.decode_websocket_msg(mensagem)
-                    response, pointer_song = self.handle_websocket_msg(msg,pointer_song)
+                    response = self.handle_websocket_msg(msg)
             except:
                 socketParaCliente.close()
                 return 
@@ -132,7 +132,7 @@ class Server:
 
         return decoded
 
-    def handle_websocket_msg(self, msg, pointer = 0):
+    def handle_websocket_msg(self, msg):
         data = msg
 
         if msg == b'payload too long': 
@@ -147,18 +147,22 @@ class Server:
         if msg == b'manda lista':
             data = json.dumps(info_musicas).encode()
 
-        if b'manda musica' == msg:
+        if 'manda musica' in msg.decode():
             # isso aqui é pra quando der pra escolher a musica
-            # lista = msg.decode().split()
-            # nome__musica = lista[2]
-            # pointer = lista[3]
-            # caminho_musica = 'musicas/' + nome__musica
+            lista = msg.decode().split()
+            nome__musica = lista[2]
+            pointer = int(lista[3])
+            caminho_musica = 'musicas/' + nome__musica
+            print(caminho_musica)
 
-            # w = wave.open(os.path.join(os.path.dirname(__file__), caminho_musica) , "rb")
+            w = wave.open(os.path.join(os.path.dirname(__file__), caminho_musica) , "rb")
 
-
-            w = wave.open(os.path.join(os.path.dirname(__file__), 'musicas/taylor.wav') , "rb")
-            w.setpos(30*pointer*w.getframerate())
+            # w = wave.open(os.path.join(os.path.dirname(__file__), 'musicas/taylor.wav') , "rb")
+            print(pointer)
+            try:
+                w.setpos(30*pointer*w.getframerate())
+            except Exception as e:
+                print(e)
             data = w.readframes(w.getframerate()*30)
             pointer += 1
             w.close()
@@ -185,7 +189,7 @@ class Server:
 
         response += data
 
-        return response, pointer
+        return response
     
     
 
@@ -204,16 +208,25 @@ info_musicas = [
         {
             "id": 0,
             "nome": "audio.wav",
-            "path": "./audio.wav",
-            "duracao": 33
+            "path": "musicas/audio.wav",
+            "duracao": 33,
+            "framerate": 0
         },
         {
             "id": 1,
             "nome":"taylor.wav",
-            "path": "./taylor.wav",
-            "duracao": 236
+            "path": "musicas/taylor.wav",
+            "duracao": 236,
+            "framerate": 0
         }
 ]
+
+
+for d in info_musicas:
+    w = wave.open(os.path.join(os.path.dirname(__file__), d["path"]) , "rb")
+    framerate = w.getframerate()
+    d["path"] = framerate
+
 
 # musicas_dir = os.listdir('musicas')
 # w = wave.open('musicas/audio.wav',"rb")
