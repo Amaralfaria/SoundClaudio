@@ -30,6 +30,7 @@ class Server:
         contador = 0
         while True:
             (socketParaCliente, enderecoDoCliente) = self.socket.accept()
+            print(enderecoDoCliente)
             self.clientes.append({
                 "id": contador,
                 "endereco": enderecoDoCliente[0],
@@ -52,6 +53,7 @@ class Server:
         # depois deixar esse pointer ser mandado pelo proprio cliente
         while max_messages > 0:
             socketRemoto = None
+            nome_cliente = False
             try: 
                 mensagem = socketParaCliente.recv(4000)
                 response = ""
@@ -62,12 +64,27 @@ class Server:
                     response = response.encode('utf-8')
                 except:
                     msg = self.decode_websocket_msg(mensagem)
-                    response, socketRemoto = self.handle_websocket_msg(msg)
+                    if 'meu nome' not in msg.decode():
+                        response, socketRemoto = self.handle_websocket_msg(msg)
+                    else:
+                        nome_cliente = True
+                        self.handle_client_name(msg,enderecoDoCliente)
+                        
+
+
             except:
-                socketParaCliente.close()
+                for i in range(len(self.clientes)):
+                    if self.clientes[i]["endereco"] == enderecoDoCliente[0] and self.clientes[i]["porta"] == enderecoDoCliente[1]:
+                        self.clientes.pop(i)
+                        break
+                print(self.clientes)
+                socketParaCliente.close()         
                 return 
 
             print("resposta enviada: ")
+            if nome_cliente:
+                continue
+
             if socketRemoto == None:
                 socketParaCliente.send(response)
             else:
@@ -76,6 +93,18 @@ class Server:
 
             
             max_messages -= 1
+
+    def handle_client_name(self,msg,enderecoDoCliente):
+        msg = msg.decode()
+        infos = msg.split()
+        nome = str(infos[2:]).strip("['']")
+        for cliente in self.clientes:
+            if cliente["endereco"] == enderecoDoCliente[0] and cliente["porta"] == enderecoDoCliente[1]:
+                cliente["nome"] = nome
+                print(cliente)
+                break
+
+
 
     def http_upgrade(self, msg):
         msg = msg.split()
@@ -153,21 +182,22 @@ class Server:
 
         if 'cliente' in  msg.decode():
             info = msg.decode().split()
-            id = info[1]
+            nome = info[1]
             play_pause = info[2]
             caminho_musica = info[3]
             data = play_pause + " " + caminho_musica
             for cliente in self.clientes:
-                if id == cliente["id"]:
+                if nome == cliente["nome"]:
                     remoto = cliente["socket"]
                     break
 
         if msg == b'manda usuarios':
-            data = []
+            data  = []
             for cliente in self.clientes:
-                data.append(cliente["id"])
-            data = json.dumps(data).encode()
-            
+                data.append(cliente["nome"])
+            data = json.dumps(data)
+            print(data)
+            data = data.encode()
             
 
         if msg == b'manda lista':

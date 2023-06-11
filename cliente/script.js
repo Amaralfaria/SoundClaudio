@@ -282,6 +282,7 @@ const socketConnect = (handleMusic, handleList) => {
   sock.onopen = () => {
     console.log("Websocket conectado");
     sock.send("manda lista");
+    sock.send(meu_nome);
     //sock.send("manda usuarios");
   };
 
@@ -291,6 +292,7 @@ const socketConnect = (handleMusic, handleList) => {
       handleMusic(msg);
     } else {
       let data = JSON.parse(msg.data);
+      console.log(data);
       handleList(data);
     }
   };
@@ -304,6 +306,7 @@ const socketConnect = (handleMusic, handleList) => {
   return sock;
 };
 
-//nome = window.prompt("Qual seu nome?")
+meu_nome = "meu nome ";
+meu_nome += window.prompt("Qual seu nome?");
 
 page().render();
