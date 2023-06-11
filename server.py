@@ -27,22 +27,31 @@ class Server:
         self.threadEscuta.run()
 
     def implementacaoThreadEscuta(self):
+        contador = 0
         while True:
             (socketParaCliente, enderecoDoCliente) = self.socket.accept()
-
+            self.clientes.append({
+                "id": contador,
+                "endereco": enderecoDoCliente[0],
+                "porta": enderecoDoCliente[1],
+                "socket": socketParaCliente,
+                "nome": "joao"
+            })
+            contador+=1
+            print(enderecoDoCliente)
             novaThread = Thread(target=self.implementacaoThreadCliente,
                                 args=(enderecoDoCliente, socketParaCliente),
                                 daemon=True)
 
             novaThread.start()
-            self.clientes.append(novaThread)
+            self.threadClientes.append(novaThread)
 
     def implementacaoThreadCliente(self, enderecoDoCliente, socketParaCliente):
         max_messages = 10
         
         # depois deixar esse pointer ser mandado pelo proprio cliente
         while max_messages > 0:
-
+            socketRemoto = None
             try: 
                 mensagem = socketParaCliente.recv(4000)
                 response = ""
@@ -53,13 +62,18 @@ class Server:
                     response = response.encode('utf-8')
                 except:
                     msg = self.decode_websocket_msg(mensagem)
-                    response = self.handle_websocket_msg(msg)
+                    response, socketRemoto = self.handle_websocket_msg(msg)
             except:
                 socketParaCliente.close()
                 return 
 
             print("resposta enviada: ")
-            socketParaCliente.send(response)
+            if socketRemoto == None:
+                socketParaCliente.send(response)
+            else:
+                socketRemoto.send(response)
+
+
             
             max_messages -= 1
 
@@ -134,15 +148,27 @@ class Server:
 
     def handle_websocket_msg(self, msg):
         data = msg
+        remoto = None
 
-        if msg == b'payload too long': 
-            data = msg
 
-        if msg == b'message not masked':
-            data = msg
+        if 'cliente' in  msg.decode():
+            info = msg.decode().split()
+            id = info[1]
+            play_pause = info[2]
+            caminho_musica = info[3]
+            data = play_pause + " " + caminho_musica
+            for cliente in self.clientes:
+                if id == cliente["id"]:
+                    remoto = cliente["socket"]
+                    break
 
-        if msg == b'oi':
-            data = b'salve pai'
+        if msg == b'manda usuarios':
+            data = []
+            for cliente in self.clientes:
+                data.append(cliente["id"])
+            data = json.dumps(data).encode()
+            
+            
 
         if msg == b'manda lista':
             data = json.dumps(info_musicas).encode()
@@ -150,9 +176,9 @@ class Server:
         if 'manda musica' in msg.decode():
             # isso aqui é pra quando der pra escolher a musica
             lista = msg.decode().split()
-            nome__musica = lista[2]
+            caminho_musica = lista[2]
             pointer = int(lista[3])
-            caminho_musica = 'musicas/' + nome__musica
+            
             print(caminho_musica)
 
             w = wave.open(os.path.join(os.path.dirname(__file__), caminho_musica) , "rb")
@@ -168,6 +194,7 @@ class Server:
             w.close()
 
         response = b'' 
+        
 
         if len(data) < 126:
             firstByte = 0x80 | 0x01
@@ -189,7 +216,7 @@ class Server:
 
         response += data
 
-        return response
+        return response, remoto
     
     
 
@@ -207,16 +234,16 @@ class Server:
 info_musicas = [
         {
             "id": 0,
-            "nome": "audio.wav",
+            "nome": "De Fundo - Desconhecido",
             "path": "musicas/audio.wav",
-            "duracao": 33,
+            "duracao": 0,
             "framerate": 0
         },
         {
             "id": 1,
-            "nome":"taylor.wav",
+            "nome":"Love Story - Taylor",
             "path": "musicas/taylor.wav",
-            "duracao": 236,
+            "duracao": 0,
             "framerate": 0
         }
 ]
@@ -225,7 +252,10 @@ info_musicas = [
 for d in info_musicas:
     w = wave.open(os.path.join(os.path.dirname(__file__), d["path"]) , "rb")
     framerate = w.getframerate()
-    d["path"] = framerate
+    d["framerate"] = framerate
+    d["duracao"] = int(w.getnframes()/framerate)
+    print(d["duracao"])
+    w.close()
 
 
 # musicas_dir = os.listdir('musicas')

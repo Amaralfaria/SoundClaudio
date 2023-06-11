@@ -38,6 +38,8 @@ const card = (music, callback) => {
 };
 
 const player = () => {
+  let wav = new window.wavefile.WaveFile();
+
   let elements = {
     root: document.querySelector(".player"),
     playPauseBtn: document.querySelector(".player").querySelector("button"),
@@ -70,7 +72,15 @@ const player = () => {
     state.context = new AudioContext();
   };
 
-  let onMessageCallback = (buff) => {
+  let onMessageCallback = (msg) => {
+
+    const message = msg.data;
+    const chunk = new Int16Array(message);
+    //wav.fromScratch(2, player.state.music["framerate"]*1, "16", chunk);
+    wav.fromScratch(2, state.music["framerate"]*1, "16", chunk);
+    
+
+    const buff = wav.toBuffer().buffer;
     state.context.decodeAudioData(
       buff,
       (sourceBuffer) => {
@@ -101,7 +111,7 @@ const player = () => {
       clearInterval(state.interval);
       state.interval = null;
     } else {
-      request = "manda musica " + state.music["nome"] + " " + state.chunksLoaded;
+      request = "manda musica " + state.music["path"] + " " + state.chunksLoaded;
 
       state.isPlaying = true;
       elements.playPauseImg.src = "assets/pause-circle-svgrepo-com.svg";
@@ -110,8 +120,14 @@ const player = () => {
         sock.send(request);
       }
       state.interval = setInterval(() => {
-        request = "manda musica " + state.music["nome"] + " " + state.chunksLoaded;
+        request = "manda musica " + state.music["path"] + " " + state.chunksLoaded;
         sock.send(request);
+
+        if((state.chunksLoaded+1)*30>=state.music["duracao"]*1){
+          clearInterval(state.interval);
+        }
+
+
       }, 10000);
     }
   };
@@ -190,25 +206,18 @@ const socketConnect = (handleMusic, handleList) => {
   const sock = new WebSocket("ws://localhost:8000");
   sock.binaryType = "arraybuffer";
 
-  let wav = new window.wavefile.WaveFile();
+  // let wav = new window.wavefile.WaveFile();
 
   sock.onopen = () => {
     console.log("Websocket conectado");
     sock.send("manda lista");
+    //sock.send("manda usuarios");
   };
 
   sock.onmessage = async (msg) => {
+    console.log(msg)
     if (msg.data instanceof ArrayBuffer) {
-      const message = msg.data;
-
-      const chunk = new Int16Array(message);
-      console.log(player.state);
-      //wav.fromScratch(2, player.state.music["framerate"]*1, "16", chunk);
-      wav.fromScratch(2, 16000, "16", chunk);
-
-      const buff = wav.toBuffer().buffer;
-
-      handleMusic(buff);
+      handleMusic(msg);
     } else {
       let data = JSON.parse(msg.data);
       handleList(data);
@@ -223,5 +232,7 @@ const socketConnect = (handleMusic, handleList) => {
 
   return sock;
 };
+
+//nome = window.prompt("Qual seu nome?")
 
 page().render();
