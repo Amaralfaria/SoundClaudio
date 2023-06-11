@@ -228,8 +228,6 @@ class Server:
         return base64.b64encode(digest).decode('utf-8')
 
 
-#hostname = socket.gethostname()
-#ipAddr = socket.gethostbyname(hostname)
 
 info_musicas = [
         {
@@ -263,4 +261,7 @@ for d in info_musicas:
 # print(w.getsampwidth(),w.getframerate())
 # w.close()
 
-Server()
+hostname = socket.gethostname()
+ipAddr = socket.gethostbyname(hostname)
+
+Server(ipAddr, 8000, 10)

@@ -110,3 +110,61 @@ h1 {
   color: white;
   font-weight: bold;
 }
+
+.clientes {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+
+  background-color: rgba(255, 255, 255, 0.4);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  color: white;
+  font-weight: bold;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  z-index: 99;
+  background: rgba(0, 0, 0, 0.4);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  height: 40%;
+  width: 40%;
+  background: #af4319;
+  border-radius: 1rem;
+
+  padding: 2rem;
+  color: white;
+}
+
+.play-remote {
+  margin: 0 auto;
+
+  color: white;
+  font-weight: bold;
+  padding: 1rem;
+  border-radius: 0.5rem;
+
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal form div {
+  width: fit-content;
+}
