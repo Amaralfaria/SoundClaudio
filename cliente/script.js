@@ -4,11 +4,14 @@ const modal = () => {
     form: document.querySelector("form"),
     playBtn: document.querySelector(".play-remote"),
     lista: document.querySelector(".lista-clientes"),
+    listaMusicas: document.querySelector(".modal-lista-musicas"),
   };
 
   let state = {
     socket: null,
     musicas: [],
+    clientes: [],
+    isOpen: false,
   };
 
   let setMusicas = (musicas) => {
@@ -19,15 +22,49 @@ const modal = () => {
     state.socket = socket;
   };
 
+  let setClientes = (clientes) => {
+    state.clientes = clientes;
+    createClientList(clientes);
+  };
+
   let render = () => {
     elements.playBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      createForm();
+
+      let musica = document.querySelector(
+        'input[name="musica"]:checked'
+      )?.value;
+
+      if (!musica) alert("por favor selecione uma musica");
+
+      let cliente = document.querySelector(
+        'input[name="cliente"]:checked'
+      )?.value;
+
+      if (!cliente) alert("por favor selecione uma musica");
+
+      let mensagem = "cliente " + cliente + " play " + musica;
+
+      state.socket.send(mensagem);
+
+      toggleModal();
+
+      elements.form.reset();
     });
   };
 
+  let toggleModal = () => {
+    if (state.isOpen) {
+      elements.overlay.classList.remove("visible");
+    } else {
+      elements.overlay.classList.add("visible");
+      createForm();
+      state.socket.send("manda usuarios");
+    }
+  };
+
   let createForm = () => {
-    let form = elements.form;
+    let listaMusicas = elements.listaMusicas;
 
     state.musicas.forEach((musica) => {
       let container = document.createElement("div");
@@ -36,28 +73,46 @@ const modal = () => {
       input.value = musica.path;
       input.name = "musica";
       input.id = `musica-${musica.id}`;
+      input.required = true;
 
       let label = document.createElement("label");
       label.innerText = `${musica.nome}`;
       label.htmlFor = `musica-${musica.id}`;
 
-      form.appendChild(document.createElement("br"));
       container.appendChild(input);
       container.appendChild(label);
-      form.appendChild(container);
+      listaMusicas.appendChild(container);
     });
   };
 
-  let createClientList = () => {
-    let sock = state.socket;
+  let createClientList = (clientes) => {
+    clientes.forEach((cliente) => {
+      let container = document.createElement("div");
 
-    sock.send("manda usuarios");
+      let input = document.createElement("input");
+      input.type = "radio";
+      input.value = cliente;
+      input.name = "cliente";
+      input.id = `cliente-${cliente}`;
+      input.required = true;
+
+      let label = document.createElement("label");
+      label.innerText = `${cliente}`;
+      label.htmlFor = `cliente-${cliente}`;
+
+      container.appendChild(input);
+      container.appendChild(label);
+
+      elements.lista.appendChild(container);
+    });
   };
 
   return {
     render,
     setMusicas,
     setSocket,
+    setClientes,
+    toggleModal,
   };
 };
 
@@ -123,7 +178,6 @@ const player = () => {
     state.chunksLoaded = 0;
 
     if (state.isPlaying) {
-      state.isPlaying = false;
       state.isPlaying = false;
       elements.playPauseImg.src = "assets/play-button-svgrepo-com.svg";
     }
@@ -249,23 +303,42 @@ const page = () => {
     modal: modal(),
   };
 
+  let elements = {
+    modalBtn: document.querySelector(".clientes"),
+  };
+
   let state = {
     socket: null,
+    musicList: null,
   };
 
   let handleMusicList = (list) => {
-    components.cardList.setMusicList(list, components.player.setActiveMusic);
-    components.modal.setMusicas(list);
+    if (typeof list[0] == "string") {
+      components.modal.setClientes(list);
+    } else {
+      components.cardList.setMusicList(list, components.player.setActiveMusic);
+      components.modal.setMusicas(list);
+      state.musicList = list;
+    }
+  };
+
+  let handlePlayRequest = (musicPath) => {
+    let music = state.musicList?.find((music) => music.path == musicPath);
+
+    components.player.setActiveMusic(music);
   };
 
   let render = () => {
     state.socket = socketConnect(
       components.player.onMessageCallback,
-      handleMusicList
+      handleMusicList,
+      handlePlayRequest
     );
     components.player.render(state.socket);
     components.modal.setSocket(state.socket);
     components.modal.render();
+
+    elements.modalBtn.addEventListener("click", components.modal.toggleModal);
   };
 
   return {
@@ -273,7 +346,7 @@ const page = () => {
   };
 };
 
-const socketConnect = (handleMusic, handleList) => {
+const socketConnect = (handleMusic, handleList, handlePlayRequest) => {
   const sock = new WebSocket("ws://192.168.150.114:8000");
   sock.binaryType = "arraybuffer";
 
@@ -291,9 +364,17 @@ const socketConnect = (handleMusic, handleList) => {
     if (msg.data instanceof ArrayBuffer) {
       handleMusic(msg);
     } else {
-      let data = JSON.parse(msg.data);
-      console.log(data);
-      handleList(data);
+      try {
+        if (msg.data?.search("play") == -1) {
+          let data = JSON.parse(msg.data);
+          console.log(data);
+          handleList(data);
+        } else {
+          handlePlayRequest(msg.data.split(" ")[1]);
+        }
+      } catch (e) {
+        console.log(e);
+      }
     }
   };
 

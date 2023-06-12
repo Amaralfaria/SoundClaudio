@@ -72,7 +72,9 @@ class Server:
                         
 
 
-            except:
+            except Exception as e:
+                print(e)
+
                 for i in range(len(self.clientes)):
                     if self.clientes[i]["endereco"] == enderecoDoCliente[0] and self.clientes[i]["porta"] == enderecoDoCliente[1]:
                         self.clientes.pop(i)
@@ -190,6 +192,7 @@ class Server:
                 if nome == cliente["nome"]:
                     remoto = cliente["socket"]
                     break
+            data = data.encode()
 
         if msg == b'manda usuarios':
             data  = []

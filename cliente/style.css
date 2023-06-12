@@ -132,9 +132,15 @@ h1 {
   z-index: 99;
   background: rgba(0, 0, 0, 0.4);
 
-  display: flex;
+  display: none;
+  visibility: hidden;
   align-items: center;
   justify-content: center;
+}
+
+.modal-overlay.visible {
+  visibility: visible;
+  display: flex;
 }
 
 .modal {
@@ -160,7 +166,7 @@ h1 {
 
 .modal form {
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
