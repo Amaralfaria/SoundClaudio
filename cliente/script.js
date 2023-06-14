@@ -3,6 +3,7 @@ const modal = () => {
     overlay: document.querySelector(".modal-overlay"),
     form: document.querySelector("form"),
     playBtn: document.querySelector(".play-remote"),
+    cancelBtn: document.querySelector(".cancel-modal"),
     lista: document.querySelector(".lista-clientes"),
     listaMusicas: document.querySelector(".modal-lista-musicas"),
   };
@@ -51,20 +52,30 @@ const modal = () => {
 
       elements.form.reset();
     });
+
+    elements.cancelBtn.addEventListener("click", () => {
+      console.log("fechou");
+      toggleModal();
+    });
   };
 
   let toggleModal = () => {
     if (state.isOpen) {
       elements.overlay.classList.remove("visible");
+      state.isOpen = false;
     } else {
       elements.overlay.classList.add("visible");
       createForm();
       state.socket.send("manda usuarios");
+      state.isOpen = true;
     }
   };
 
   let createForm = () => {
     let listaMusicas = elements.listaMusicas;
+
+    while (listaMusicas.firstChild)
+      listaMusicas.removeChild(listaMusicas.firstChild);
 
     state.musicas.forEach((musica) => {
       let container = document.createElement("div");
@@ -86,6 +97,9 @@ const modal = () => {
   };
 
   let createClientList = (clientes) => {
+    while (elements.lista.firstChild)
+      elements.lista.removeChild(elements.lista.firstChild);
+
     clientes.forEach((cliente) => {
       let container = document.createElement("div");
 
@@ -162,10 +176,13 @@ const player = () => {
     context: null,
     chunksLoaded: 0,
     interval: null,
+    socket: null,
   };
 
   let render = (socket) => {
-    setHandlers(socket);
+    setHandlers();
+
+    state.socket = socket;
 
     if (!state.music) elements.playPauseBtn.disabled = true;
   };
@@ -193,12 +210,13 @@ const player = () => {
     if (state.context) state.context?.close();
 
     state.context = new AudioContext();
+
+    handlePlayPause();
   };
 
   let onMessageCallback = (msg) => {
     const message = msg.data;
     const chunk = new Int16Array(message);
-    //wav.fromScratch(2, player.state.music["framerate"]*1, "16", chunk);
     wav.fromScratch(2, state.music["framerate"] * 1, "16", chunk);
 
     const buff = wav.toBuffer().buffer;
@@ -210,7 +228,7 @@ const player = () => {
         soundSource.connect(state.context.destination);
         soundSource.start(0 + 30 * state.chunksLoaded);
         state.chunksLoaded++;
-        if (!state.isPlaying) context.suspend();
+        if (!state.isPlaying) state.context.suspend();
       },
       (e) => {
         console.log(e);
@@ -218,13 +236,14 @@ const player = () => {
     );
   };
 
-  let setHandlers = (socket) => {
+  let setHandlers = () => {
     elements.playPauseBtn.addEventListener("click", () => {
-      handlePlayPause(socket);
+      handlePlayPause();
     });
   };
 
-  let handlePlayPause = (sock) => {
+  let handlePlayPause = () => {
+    const sock = state.socket;
     if (state.isPlaying) {
       state.isPlaying = false;
       elements.playPauseImg.src = "assets/play-button-svgrepo-com.svg";
@@ -349,15 +368,13 @@ const page = () => {
 const socketConnect = (handleMusic, handleList, handlePlayRequest) => {
   const ip = window.prompt("qual o ip do servidor local?");
   const sock = new WebSocket(`ws://${ip}:8000`);
-  sock.binaryType = "arraybuffer";
 
-  // let wav = new window.wavefile.WaveFile();
+  sock.binaryType = "arraybuffer";
 
   sock.onopen = () => {
     console.log("Websocket conectado");
     sock.send("manda lista");
     sock.send(meu_nome);
-    //sock.send("manda usuarios");
   };
 
   sock.onmessage = async (msg) => {

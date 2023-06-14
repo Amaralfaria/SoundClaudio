@@ -165,13 +165,13 @@ class Server:
         encoded = b''
 
         for i in range(payload_length):
-            encoded += msg[i + current_byte].to_bytes(length=1, signed=False)
+            encoded += msg[i + current_byte].to_bytes(length=1, signed=False, byteorder="big")
 
         decoded = b''
 
         for i in range(payload_length):
             val = encoded[i] ^ mask_key[i % 4]
-            decoded += val.to_bytes(length=1, signed=False)
+            decoded += val.to_bytes(length=1, signed=False, byteorder="big")
 
         print(decoded)
 
@@ -231,21 +231,21 @@ class Server:
 
         if len(data) < 126:
             firstByte = 0x80 | 0x01
-            response += firstByte.to_bytes(length=1, signed=False)
-            response += len(data).to_bytes(length=1, signed=False)
+            response += firstByte.to_bytes(length=1, signed=False, byteorder="big")
+            response += len(data).to_bytes(length=1, signed=False, byteorder="big")
         elif len(data) <= 2 ** 16:
             firstByte = 0x80 | 0x01
-            response += firstByte.to_bytes(length=1, signed=False)
-            response += (126).to_bytes(length=1, signed=False)
-            response += (len(data) >> 8).to_bytes(length=1, signed=False)
-            response += (len(data) & 0b11111111).to_bytes(length=1, signed=False)
+            response += firstByte.to_bytes(length=1, signed=False, byteorder="big")
+            response += (126).to_bytes(length=1, signed=False, byteorder="big")
+            response += (len(data) >> 8).to_bytes(length=1, signed=False, byteorder="big")
+            response += (len(data) & 0b11111111).to_bytes(length=1, signed=False, byteorder="big")
         else: 
             firstByte = 0x80 | 0x02
-            response += firstByte.to_bytes(length=1, signed=False)
-            response += (127).to_bytes(length=1, signed=False)
+            response += firstByte.to_bytes(length=1, signed=False, byteorder="big")
+            response += (127).to_bytes(length=1, signed=False, byteorder="big")
             for i in range(8):
                 num = (len(data) >> (56 - (8 * i))) & 0b11111111
-                response += num.to_bytes(length=1, signed=False)
+                response += num.to_bytes(length=1, signed=False, byteorder="big")
 
         response += data
 
