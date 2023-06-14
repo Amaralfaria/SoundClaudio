@@ -347,7 +347,8 @@ const page = () => {
 };
 
 const socketConnect = (handleMusic, handleList, handlePlayRequest) => {
-  const sock = new WebSocket("ws://192.168.150.114:8000");
+  const ip = window.prompt("qual o ip do servidor local?");
+  const sock = new WebSocket(`ws://${ip}:8000`);
   sock.binaryType = "arraybuffer";
 
   // let wav = new window.wavefile.WaveFile();
