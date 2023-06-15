@@ -177,6 +177,7 @@ const player = () => {
     chunksLoaded: 0,
     interval: null,
     socket: null,
+    musicsPlayed: {},
   };
 
   let render = (socket) => {
@@ -187,8 +188,8 @@ const player = () => {
     if (!state.music) elements.playPauseBtn.disabled = true;
   };
 
-  let setActiveMusic = (music) => {
-    if (state.music && state?.music?.nome == music.nome) return;
+  let setActiveMusic = (music, restart = false) => {
+    if (state.music && state?.music?.nome == music.nome && !restart) return;
 
     state.music = music;
 
@@ -198,6 +199,7 @@ const player = () => {
       state.isPlaying = false;
       elements.playPauseImg.src = "assets/play-button-svgrepo-com.svg";
     }
+
     if (state.interval) {
       clearInterval(state.interval);
       state.interval = null;
@@ -211,15 +213,76 @@ const player = () => {
 
     state.context = new AudioContext();
 
+    console.log(state);
+
+    if (state.musicsPlayed.hasOwnProperty(music.path)) {
+      if (state.musicsPlayed[music.path].chunksLoaded != 0) {
+        for (let i = 0; i < state.musicsPlayed[music.path].chunksLoaded; i++) {
+          const chunk = state.musicsPlayed[music.path].chunks[i];
+
+          wav.fromScratch(2, state.music["framerate"] * 1, "16", chunk);
+
+          const buff = wav.toBuffer().buffer;
+
+          state.context.decodeAudioData(
+            buff,
+            (sourceBuffer) => {
+              var soundSource = state.context.createBufferSource();
+              soundSource.buffer = sourceBuffer;
+              soundSource.connect(state.context.destination);
+              soundSource.start(0 + 30 * i);
+              soundSource.addEventListener("ended", () => {
+                console.log(state.context.currentTime);
+                if (state.music["duracao"] * 1 <= state.context.currentTime) {
+                  state.context.suspend();
+                  state.isPlaying = false;
+                  elements.playPauseImg.src =
+                    "assets/play-button-svgrepo-com.svg";
+                  setActiveMusic(state.music, true);
+                }
+              });
+              if (!state.isPlaying) state.context.suspend();
+            },
+            (e) => {
+              console.log(e);
+            }
+          );
+        }
+        state.chunksLoaded = state.musicsPlayed[music.path].chunksLoaded;
+      }
+    } else {
+      state.musicsPlayed[music.path] = {
+        chunks: [],
+        chunksLoaded: 0,
+      };
+    }
+
+    state.context.currentTime = 0;
+
+    state.context.onstatechange = (e) => {
+      console.log(state.context.state);
+    };
+
     handlePlayPause();
   };
 
   let onMessageCallback = (msg) => {
     const message = msg.data;
     const chunk = new Int16Array(message);
+    console.log(chunk);
+
+    const caminhoDaMusica = state.music["path"];
+
+    console.log(state.musicsPlayed[caminhoDaMusica]);
+    state.musicsPlayed[caminhoDaMusica] = {
+      chunks: [...state.musicsPlayed[caminhoDaMusica].chunks, chunk],
+      chunksLoaded: state.musicsPlayed[caminhoDaMusica].chunksLoaded + 1,
+    };
+
     wav.fromScratch(2, state.music["framerate"] * 1, "16", chunk);
 
     const buff = wav.toBuffer().buffer;
+
     state.context.decodeAudioData(
       buff,
       (sourceBuffer) => {
@@ -227,6 +290,15 @@ const player = () => {
         soundSource.buffer = sourceBuffer;
         soundSource.connect(state.context.destination);
         soundSource.start(0 + 30 * state.chunksLoaded);
+        soundSource.addEventListener("ended", () => {
+          console.log(state.context.currentTime);
+          if (state.music["duracao"] * 1 <= state.context.currentTime) {
+            state.context.suspend();
+            state.isPlaying = false;
+            elements.playPauseImg.src = "assets/play-button-svgrepo-com.svg";
+            setActiveMusic(state.music, true);
+          }
+        });
         state.chunksLoaded++;
         if (!state.isPlaying) state.context.suspend();
       },
@@ -247,25 +319,39 @@ const player = () => {
     if (state.isPlaying) {
       state.isPlaying = false;
       elements.playPauseImg.src = "assets/play-button-svgrepo-com.svg";
+
       if (state.context) state.context.suspend();
+
       clearInterval(state.interval);
+
       state.interval = null;
     } else {
+      console.log(state.chunksLoaded);
+
       request =
         "manda musica " + state.music["path"] + " " + state.chunksLoaded;
 
       state.isPlaying = true;
+
       elements.playPauseImg.src = "assets/pause-circle-svgrepo-com.svg";
+
       if (state.context) state.context.resume();
-      if (state.chunksLoaded == 0) {
-        sock.send(request);
+
+      if ((state.chunksLoaded + 1) * 30 >= state.music["duracao"] * 1) {
+        console.log("nao precisa mais pedir");
+        return;
       }
+
+      if (state.chunksLoaded == 0) sock.send(request);
+
       state.interval = setInterval(() => {
         request =
           "manda musica " + state.music["path"] + " " + state.chunksLoaded;
+        console.log(request);
         sock.send(request);
 
         if ((state.chunksLoaded + 1) * 30 >= state.music["duracao"] * 1) {
+          console.log("nao precisa mais pedir");
           clearInterval(state.interval);
         }
       }, 10000);
@@ -368,6 +454,7 @@ const page = () => {
 const socketConnect = (handleMusic, handleList, handlePlayRequest) => {
   const ip = window.prompt("qual o ip do servidor local?");
   const sock = new WebSocket(`ws://${ip}:8000`);
+  window.sock = sock;
 
   sock.binaryType = "arraybuffer";
 

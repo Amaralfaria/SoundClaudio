@@ -11,7 +11,7 @@ WEBSOCKET_MAGIC_STRING_KEY = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 
 
 class Server:
-    def __init__(self, endereco_servidor="0.0.0.0", porta_servidor=8000, max_conexoes=10):
+    def __init__(self, endereco_servidor="0.0.0.0", porta_servidor=8000, max_conexoes=30):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.socket.bind((endereco_servidor, porta_servidor))
@@ -48,10 +48,8 @@ class Server:
             self.threadClientes.append(novaThread)
 
     def implementacaoThreadCliente(self, enderecoDoCliente, socketParaCliente):
-        max_messages = 10
-        
         # depois deixar esse pointer ser mandado pelo proprio cliente
-        while max_messages > 0:
+        while True:
             socketRemoto = None
             nome_cliente = False
             try: 
@@ -69,8 +67,6 @@ class Server:
                     else:
                         nome_cliente = True
                         self.handle_client_name(msg,enderecoDoCliente)
-                        
-
 
             except Exception as e:
                 print(e)
@@ -92,9 +88,6 @@ class Server:
             else:
                 socketRemoto.send(response)
 
-
-            
-            max_messages -= 1
 
     def handle_client_name(self,msg,enderecoDoCliente):
         msg = msg.decode()
