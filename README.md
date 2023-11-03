@@ -6,4 +6,4 @@ Por meio desse sistema o usuário pode escolher uma das músicas disponíveis no
 
 ## Como iniciar o sistema ##
 1. Iniciar server.py
-2. Abrir index.html
+2. Abrir cliente/index.html
