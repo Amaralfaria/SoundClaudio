@@ -1,6 +1,9 @@
 # SoundClaudio
+Se trata de um sistema web de streaming de áudio feito utilizando sockets.
 
-Pra rodar o programa basta rodar o script shell run.sh, se vc estiver no linux, é só abrir o diretório no terminal e rodar ./run.sh, se tiver no windows ai eu já não faço a menor ideia kkkkk.
+## Visão geral ##
+Por meio desse sistema o usuário pode escolher uma das músicas disponíveis no servidor para tocar. Além disso é possível iniciar uma música em um PC diferente caso os usuários sejam cadastrados. Para realizar o streaming da música são envidos vários pacotes contendo 30s de música.
 
-Mas por enquanto o programa não está fazendo nada de mais, só tá abrindo um servidor com python e rodando um cliente que fiz para teste usando javaScript (obs: para rodar o cliente nesse caso
-precisa de ter o node instalado). Ai ele só manda esse arquivo .wav do server para o cliente.
+## Como rodar ##
+1. Iniciar server.py
+2. Abrir
